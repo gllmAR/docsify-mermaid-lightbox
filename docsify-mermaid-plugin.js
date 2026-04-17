@@ -23,8 +23,7 @@
   /* ------------------------------------------------------------------ */
   var cfg = Object.assign(
     {
-      theme: 'neutral',
-      darkMode: false,
+      theme: 'auto',         // 'auto' detects from OS/docsify, or: 'neutral','dark','default','forest'
       mermaidUrl: 'https://cdn.jsdelivr.net/npm/mermaid@latest/dist/mermaid.esm.min.mjs',
       lightbox: true,
     },
@@ -32,21 +31,50 @@
   );
 
   /* ------------------------------------------------------------------ */
+  /*  Dark-mode detection                                                */
+  /* ------------------------------------------------------------------ */
+  function isDarkMode() {
+    // 1. Check Docsify 5's --color-bg (dark theme sets it to ~#1f2428)
+    var bg = getComputedStyle(document.documentElement).getPropertyValue('--color-bg').trim();
+    if (bg) {
+      // Parse the luminance — if it's dark, we're in dark mode
+      var temp = document.createElement('div');
+      temp.style.color = bg;
+      document.body.appendChild(temp);
+      var computed = getComputedStyle(temp).color;
+      document.body.removeChild(temp);
+      var m = computed.match(/\d+/g);
+      if (m && m.length >= 3) {
+        var luminance = (parseInt(m[0]) * 299 + parseInt(m[1]) * 587 + parseInt(m[2]) * 114) / 1000;
+        return luminance < 128;
+      }
+    }
+    // 2. Fallback: OS preference
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  }
+
+  function getMermaidTheme() {
+    if (cfg.theme !== 'auto') return cfg.theme;
+    return isDarkMode() ? 'dark' : 'neutral';
+  }
+
+  /* ------------------------------------------------------------------ */
   /*  CSS injection                                                      */
   /* ------------------------------------------------------------------ */
   var css = `
 /* ---- docsify-mermaid-plugin styles ---- */
 
-/* Diagram wrapper */
+/* Diagram wrapper — uses Docsify 5 CSS variables */
 .docsify-mermaid {
   position: relative;
   margin: 1.5em 0;
   text-align: center;
   cursor: pointer;
   border: 1px solid var(--border-color, #e8e8e8);
-  border-radius: 6px;
+  border-radius: var(--border-radius, 6px);
   padding: 1em;
-  background: var(--mermaid-bg, #fff);
+  background: var(--color-bg, #fff);
+  color: var(--color-text, #333);
   transition: box-shadow .2s;
 }
 .docsify-mermaid:hover {
@@ -113,7 +141,8 @@
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   touch-action: none;
-  background: #fff;
+  background: var(--color-bg, #fff);
+  color: var(--color-text, #333);
   border-radius: 8px;
   padding: 1.5em;
   box-shadow: 0 4px 30px rgba(0,0,0,.3);
@@ -237,21 +266,30 @@
   /*  Mermaid loader (ESM dynamic import)                                */
   /* ------------------------------------------------------------------ */
   var mermaidReady = null;
+  var mermaidInstance = null;
+  var currentMermaidTheme = null;
 
   function loadMermaid() {
     if (mermaidReady) return mermaidReady;
     mermaidReady = import(cfg.mermaidUrl).then(function (mod) {
-      var mermaid = mod.default || mod;
-      mermaid.initialize({
-        startOnLoad: false,
-        theme: cfg.theme,
-        darkMode: cfg.darkMode,
-        securityLevel: 'loose',
-        logLevel: 'error',
-      });
-      return mermaid;
+      mermaidInstance = mod.default || mod;
+      return mermaidInstance;
     });
     return mermaidReady;
+  }
+
+  /** (Re-)initialize mermaid with the resolved theme */
+  function initMermaidTheme(mermaid) {
+    var theme = getMermaidTheme();
+    if (theme === currentMermaidTheme) return;
+    currentMermaidTheme = theme;
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: theme,
+      darkMode: isDarkMode(),
+      securityLevel: 'loose',
+      logLevel: 'error',
+    });
   }
 
   /* ------------------------------------------------------------------ */
@@ -261,6 +299,7 @@
 
   async function renderDiagrams(content, el) {
     var mermaid = await loadMermaid();
+    initMermaidTheme(mermaid);
     var blocks = el.querySelectorAll('pre[data-lang="mermaid"] code');
 
     for (var i = 0; i < blocks.length; i++) {
@@ -942,6 +981,29 @@
 
     hook.doneEach(function () {
       renderDiagrams(null, document.querySelector('.markdown-section, article.markdown-section, #main, .content'));
+    });
+
+    // Re-render all diagrams when color scheme changes
+    hook.mounted(function () {
+      if (cfg.theme === 'auto' && window.matchMedia) {
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () {
+          currentMermaidTheme = null; // force re-init
+          var container = document.querySelector('.markdown-section, article.markdown-section, #main, .content');
+          if (container) {
+            // Re-render: replace rendered diagrams back with code blocks
+            var diagrams = container.querySelectorAll('.docsify-mermaid[data-mermaid-source]');
+            diagrams.forEach(function (d) {
+              var pre = document.createElement('pre');
+              pre.setAttribute('data-lang', 'mermaid');
+              var code = document.createElement('code');
+              code.textContent = d.getAttribute('data-mermaid-source');
+              pre.appendChild(code);
+              d.replaceWith(pre);
+            });
+            renderDiagrams(null, container);
+          }
+        });
+      }
     });
   }
 

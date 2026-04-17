@@ -1,3 +1,4 @@
 - [Home](/)
 - [Examples](examples.md)
 - [Stress Test](stress-test.md)
+- [Mermaid Reference](mermaid-reference.md)

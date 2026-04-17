@@ -69,7 +69,6 @@
   position: relative;
   margin: 1.5em 0;
   text-align: center;
-  cursor: pointer;
   border: 1px solid var(--border-color, #e8e8e8);
   border-radius: var(--border-radius, 6px);
   padding: 1em;
@@ -90,26 +89,26 @@
   max-width: none !important;
 }
 
-/* Expand hint */
-.docsify-mermaid::after {
-  content: '\\26F6  click to expand';
-  position: absolute;
-  bottom: 4px;
-  right: 10px;
-  font-size: 11px;
-  opacity: .45;
-  pointer-events: none;
-  transition: opacity .2s;
-}
-.docsify-mermaid:hover::after {
-  opacity: .8;
-}
-
-/* Copy button */
-.docsify-mermaid-copy {
+/* Action buttons (copy, expand) */
+.docsify-mermaid-actions {
   position: absolute;
   top: 6px;
   right: 6px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity .2s;
+  z-index: 2;
+}
+.docsify-mermaid:hover .docsify-mermaid-actions {
+  opacity: .7;
+}
+.docsify-mermaid-actions:hover {
+  opacity: 1 !important;
+}
+
+.docsify-mermaid-copy,
+.docsify-mermaid-expand {
   width: 32px;
   height: 32px;
   border: none;
@@ -121,17 +120,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0;
   pointer-events: auto;
-  transition: opacity .2s, background .2s;
-  z-index: 2;
+  transition: background .2s;
 }
-.docsify-mermaid:hover .docsify-mermaid-copy {
-  opacity: .7;
-}
-.docsify-mermaid-copy:hover {
-  opacity: 1 !important;
-  background: rgba(0,0,0,.12);
+.docsify-mermaid-copy:hover,
+.docsify-mermaid-expand:hover {
+  background: rgba(0,0,0,.15);
 }
 
 /* ---- Lightbox overlay ---- */
@@ -170,7 +164,9 @@
 .mermaid-lightbox-svg {
   transform-origin: center;
   will-change: transform;
-  cursor: zoom-in;
+  cursor: default;
+  user-select: text;
+  -webkit-user-select: text;
   transition: transform .15s cubic-bezier(0.4, 0, 0.2, 1);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
@@ -181,11 +177,10 @@
   padding: 1.5em;
   box-shadow: 0 4px 30px rgba(0,0,0,.3);
 }
-.mermaid-lightbox-svg.zoomed {
-  cursor: grab;
-}
 .mermaid-lightbox-svg.grabbing {
   cursor: grabbing;
+  user-select: none;
+  -webkit-user-select: none;
 }
 .mermaid-lightbox-svg.no-transition {
   transition: none !important;
@@ -349,6 +344,10 @@
         wrapper.innerHTML = result.svg;
         wrapper.setAttribute('data-mermaid-source', graphDef);
 
+        // Action buttons container
+        var actions = document.createElement('div');
+        actions.className = 'docsify-mermaid-actions';
+
         // Copy-to-clipboard button
         var copyBtn = document.createElement('button');
         copyBtn.className = 'docsify-mermaid-copy';
@@ -356,20 +355,31 @@
         copyBtn.innerHTML = '\u2398'; // ⎘ copy symbol
         copyBtn.addEventListener('click', function (ev) {
           ev.stopPropagation();
-          var src = this.parentElement.getAttribute('data-mermaid-source');
+          var src = this.closest('.docsify-mermaid').getAttribute('data-mermaid-source');
           var block = '```mermaid\n' + src + '\n```';
+          var btn = this;
           navigator.clipboard.writeText(block).then(function () {
-            copyBtn.textContent = '\u2713'; // ✓
-            setTimeout(function () { copyBtn.innerHTML = '\u2398'; }, 1500);
+            btn.textContent = '\u2713'; // ✓
+            setTimeout(function () { btn.innerHTML = '\u2398'; }, 1500);
           });
         });
-        wrapper.appendChild(copyBtn);
+        actions.appendChild(copyBtn);
 
-        pre.replaceWith(wrapper);
-
+        // Expand / lightbox button
         if (cfg.lightbox) {
-          wrapper.addEventListener('click', openLightbox);
+          var expandBtn = document.createElement('button');
+          expandBtn.className = 'docsify-mermaid-expand';
+          expandBtn.title = 'Expand diagram';
+          expandBtn.innerHTML = '\u26F6'; // ⛶ expand symbol
+          expandBtn.addEventListener('click', function (ev) {
+            ev.stopPropagation();
+            openLightbox({ currentTarget: this.closest('.docsify-mermaid') });
+          });
+          actions.appendChild(expandBtn);
         }
+
+        wrapper.appendChild(actions);
+        pre.replaceWith(wrapper);
       } catch (err) {
         console.warn('[docsify-mermaid] render error:', err);
         var errDiv = document.createElement('div');
@@ -859,17 +869,27 @@
       }, 200);
     }, { passive: false });
 
-    /* ======== MOUSE DRAG (pan when zoomed) ======== */
+    /* ======== MOUSE DRAG (pan — with threshold to preserve text selection) ======== */
+    var dragStartX = 0;
+    var dragStartY = 0;
+    var dragEngaged = false; // true once threshold exceeded
+    var DRAG_THRESHOLD = 5; // px before switching from select to drag
+
     lightboxOverlay.addEventListener('mousedown', function (e) {
       var el = getSvgEl();
       if (!el || e.button !== 0) return;
-      if (lbScale <= fitScale) return; // No drag unless zoomed
 
-      e.preventDefault();
+      // Don't interfere with clicks on interactive SVG elements (links, etc.)
+      var tgt = e.target;
+      if (tgt.closest && tgt.closest('a, [onclick], [data-action]')) return;
+
       isDraggingMouse = true;
+      dragEngaged = false;
       mouseLastX = e.clientX;
       mouseLastY = e.clientY;
-      el.classList.add('no-transition', 'grabbing');
+      dragStartX = e.clientX;
+      dragStartY = e.clientY;
+      el.classList.add('no-transition');
     });
 
     document.addEventListener('mousemove', function (e) {
@@ -877,6 +897,18 @@
       var el = getSvgEl();
       if (!el) return;
 
+      // Only start panning after exceeding the drag threshold
+      if (!dragEngaged) {
+        var totalDx = Math.abs(e.clientX - dragStartX);
+        var totalDy = Math.abs(e.clientY - dragStartY);
+        if (totalDx < DRAG_THRESHOLD && totalDy < DRAG_THRESHOLD) return;
+        dragEngaged = true;
+        // Clear any accidental text selection once drag starts
+        window.getSelection && window.getSelection().removeAllRanges();
+        el.classList.add('grabbing');
+      }
+
+      e.preventDefault(); // prevent text selection while panning
       var dx = e.clientX - mouseLastX;
       var dy = e.clientY - mouseLastY;
       lbX += dx;
@@ -893,6 +925,7 @@
     document.addEventListener('mouseup', function () {
       if (!isDraggingMouse) return;
       isDraggingMouse = false;
+      dragEngaged = false;
       var el = getSvgEl();
       if (el) {
         el.classList.remove('no-transition', 'grabbing');

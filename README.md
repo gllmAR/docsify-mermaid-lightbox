@@ -1,15 +1,17 @@
-# docsify-mermaid-simple
+# docsify-mermaid-lightbox
 
-A lightweight Docsify 5 plugin that adds **Mermaid** diagram rendering with a single `<script>` import.  
-No extra CSS or dependency tags needed — the plugin self-injects everything.
+A lightweight, self-contained Docsify 5 plugin for **Mermaid** diagram rendering with a full-featured **lightbox**.  
+Single `<script>` import — no extra CSS or dependency tags needed.
 
 ## Features
 
-- Single `<script>` tag — auto-loads Mermaid from CDN, injects CSS
-- Neutral theme by default (configurable)
-- Lightbox with **zoom**, **pan**, and **keyboard navigation**
+- **Single `<script>` tag** — auto-loads Mermaid from CDN, injects all CSS
+- **Auto dark / light mode** — detects Docsify 5 theme or OS preference, picks matching Mermaid theme
+- **Lightbox** with fit-to-screen zoom, pan, and keyboard navigation
+- **Wide zoom range** — 0.1x to 20x, with adaptive scroll speed
+- Pinch-to-zoom and swipe navigation on touch devices
 - Previous / Next diagram navigation inside the lightbox
-- Scroll-wheel zoom, drag to pan, touch support
+- **Copy to clipboard** button on each diagram (copies markdown fenced code block)
 - Works with GitHub Pages out of the box
 
 ## Quick start
@@ -26,11 +28,16 @@ Optional — set `window.$docsifyMermaid` before the plugin loads:
 
 ```js
 window.$docsifyMermaid = {
-  theme: 'neutral',   // 'default', 'dark', 'forest', 'neutral'
-  darkMode: false,
+  theme: 'auto',       // 'auto' (default), 'neutral', 'default', 'dark', 'forest'
   lightbox: true,      // set false to disable the lightbox
 };
 ```
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `theme` | `'auto'` | Mermaid theme. `'auto'` picks `dark` or `neutral` based on OS / Docsify 5 theme |
+| `mermaidUrl` | jsDelivr latest | Custom URL for the Mermaid ESM module |
+| `lightbox` | `true` | Enable / disable the lightbox on click |
 
 ## Writing diagrams
 
@@ -49,12 +56,13 @@ graph LR
 |--------|--------------|----------|
 | Open | Click diagram | — |
 | Close | Click backdrop / ✕ | `Esc` |
-| Zoom in | Scroll up / `+` button | `+` |
-| Zoom out | Scroll down / `−` button | `-` |
-| Reset view | `↺` button | `0` |
-| Previous | `❮` button | `←` |
-| Next | `❯` button | `→` |
-| Pan | Drag | — |
+| Zoom in | Scroll up / pinch out / `+` button | `+` |
+| Zoom out | Scroll down / pinch in / `−` button | `-` |
+| Reset (fit) | `↺` button / double-tap | `0` |
+| Previous | `❮` button / swipe right | `←` |
+| Next | `❯` button / swipe left | `→` |
+| Pan | Drag (when zoomed) | — |
+| Copy source | `⎘` button (top-right of diagram) | — |
 
 ## Test pages
 

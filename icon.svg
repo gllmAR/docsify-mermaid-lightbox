@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0a23"/>
+      <stop offset="100%" stop-color="#1a1a40"/>
+    </linearGradient>
+    <linearGradient id="node1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00c9a7"/>
+      <stop offset="100%" stop-color="#00d4aa"/>
+    </linearGradient>
+    <linearGradient id="node2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#845ef7"/>
+      <stop offset="100%" stop-color="#9775fa"/>
+    </linearGradient>
+    <linearGradient id="node3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#339af0"/>
+      <stop offset="100%" stop-color="#4dabf7"/>
+    </linearGradient>
+    <linearGradient id="expand" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffd43b"/>
+      <stop offset="100%" stop-color="#ffe066"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background rounded square -->
+  <rect x="16" y="16" width="480" height="480" rx="64" ry="64" fill="url(#bg)"/>
+
+  <!-- Connection lines -->
+  <line x1="196" y1="168" x2="316" y2="168" stroke="#00c9a7" stroke-width="4" opacity="0.6"/>
+  <line x1="256" y1="168" x2="256" y2="260" stroke="#845ef7" stroke-width="4" opacity="0.6"/>
+  <line x1="152" y1="300" x2="256" y2="260" stroke="#339af0" stroke-width="4" opacity="0.6"/>
+  <line x1="360" y1="300" x2="256" y2="260" stroke="#339af0" stroke-width="4" opacity="0.6"/>
+  <line x1="152" y1="300" x2="152" y2="380" stroke="#339af0" stroke-width="4" opacity="0.6"/>
+  <line x1="360" y1="300" x2="360" y2="380" stroke="#339af0" stroke-width="4" opacity="0.6"/>
+
+  <!-- Top-left node (rounded rect) -->
+  <rect x="120" y="136" width="120" height="64" rx="12" ry="12" fill="url(#node1)" opacity="0.9"/>
+
+  <!-- Top-right node (rounded rect) -->
+  <rect x="272" y="136" width="120" height="64" rx="12" ry="12" fill="url(#node1)" opacity="0.9"/>
+
+  <!-- Center diamond node -->
+  <polygon points="256,224 308,260 256,296 204,260" fill="url(#node2)" opacity="0.9"/>
+
+  <!-- Bottom-left node (rounded rect) -->
+  <rect x="88" y="316" width="128" height="56" rx="12" ry="12" fill="url(#node3)" opacity="0.9"/>
+
+  <!-- Bottom-right node (rounded rect) -->
+  <rect x="296" y="316" width="128" height="56" rx="12" ry="12" fill="url(#node3)" opacity="0.9"/>
+
+  <!-- Expand/lightbox icon in bottom-right corner -->
+  <g transform="translate(370, 400)" opacity="0.95">
+    <!-- Expand arrows (⛶ stylized) -->
+    <polyline points="8,32 8,8 32,8" fill="none" stroke="url(#expand)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+    <polyline points="72,8 96,8 96,32" fill="none" stroke="url(#expand)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+    <polyline points="96,72 96,96 72,96" fill="none" stroke="url(#expand)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+    <polyline points="32,96 8,96 8,72" fill="none" stroke="url(#expand)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Small decorative dots on nodes for detail -->
+  <circle cx="180" cy="168" r="4" fill="#fff" opacity="0.5"/>
+  <circle cx="332" cy="168" r="4" fill="#fff" opacity="0.5"/>
+  <circle cx="152" cy="344" r="4" fill="#fff" opacity="0.5"/>
+  <circle cx="360" cy="344" r="4" fill="#fff" opacity="0.5"/>
+</svg>

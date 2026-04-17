@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>docsify-mermaid-simple</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/docsify@^5.0.0-rc/dist/themes/core.min.css">
+
+  <!-- Core Dark - Dark Mode Only (add-on), to disable remove or comment out the below line -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/docsify@^5.0.0-rc/dist/themes/addons/core-dark.min.css"
+      media="(prefers-color-scheme: dark)" />
+</head>
+<body>
+  <div id="app"></div>
+
+  <!-- Docsify Mermaid Plugin — single-line import, handles everything -->
+  <script src="docsify-mermaid-plugin.js"></script>
+
+  <script>
+    window.$docsify = Object.assign(window.$docsify || {}, {
+      name: 'docsify-mermaid-simple',
+      repo: 'gllmAR/docsify-mermaid-simple',
+      loadSidebar: true,
+      subMaxLevel: 3,
+      auto2top: true,
+    });
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/docsify@^5.0.0-rc/dist/docsify.min.js"></script>
+</body>
+</html>

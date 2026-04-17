@@ -463,69 +463,65 @@
     return lightboxOverlay && lightboxOverlay.querySelector('.mermaid-lightbox-svg');
   }
 
-  /** Compute scale so the SVG content fits the viewport with padding */
+  /**
+   * Compute the scale that makes the lightbox SVG container (content + padding)
+   * fit inside the visible viewport container.
+   *
+   * Strategy:
+   *  1. Strip Mermaid's inline size constraints so the SVG renders naturally.
+   *  2. If a viewBox exists, set width/height to match (1 SVG-unit = 1 CSS-px).
+   *  3. Measure the actual rendered container div at scale(1).
+   *  4. Measure the actual available parent area.
+   *  5. fitScale = min(availW / divW, availH / divH), capped at 4×.
+   */
   function computeFitScale(svgContainer) {
     var svg = svgContainer.querySelector('svg');
     if (!svg) return 1;
 
-    var svgW = 0, svgH = 0;
+    // ---- 1. Remove Mermaid's inline constraints ----
+    svg.style.maxWidth = 'none';
+    svg.style.minWidth = '';
 
-    // 1. Try viewBox (most reliable — gives true content bounds)
+    // ---- 2. Size the SVG from its viewBox so content is 1:1 ----
     var vb = svg.getAttribute('viewBox');
     if (vb) {
       var parts = vb.split(/[\s,]+/).map(Number);
       if (parts.length === 4 && parts[2] > 0 && parts[3] > 0) {
-        svgW = parts[2];
-        svgH = parts[3];
+        svg.setAttribute('width', parts[2]);
+        svg.setAttribute('height', parts[3]);
+        svg.style.width  = parts[2] + 'px';
+        svg.style.height = parts[3] + 'px';
+      }
+    } else {
+      // No viewBox — keep attributes but remove style constraints
+      var aw = parseFloat(svg.getAttribute('width'));
+      var ah = parseFloat(svg.getAttribute('height'));
+      if (aw > 0 && ah > 0) {
+        svg.style.width  = aw + 'px';
+        svg.style.height = ah + 'px';
+      } else {
+        svg.style.width  = 'auto';
+        svg.style.height = 'auto';
       }
     }
 
-    // 2. Try width/height attributes (Mermaid often sets these)
-    if (!svgW || !svgH) {
-      var attrW = parseFloat(svg.getAttribute('width'));
-      var attrH = parseFloat(svg.getAttribute('height'));
-      if (attrW > 0) svgW = svgW || attrW;
-      if (attrH > 0) svgH = svgH || attrH;
-    }
+    // ---- 3. Measure the container div at scale(1) — includes padding ----
+    svgContainer.style.transform = 'scale(1)';
+    void svgContainer.offsetHeight;               // force reflow
+    var divRect = svgContainer.getBoundingClientRect();
+    if (divRect.width <= 0 || divRect.height <= 0) return 1;
 
-    // 3. Try inline style dimensions (Mermaid may use max-width / height in style)
-    if (!svgW || !svgH) {
-      var styleW = parseFloat(svg.style.maxWidth) || parseFloat(svg.style.width);
-      var styleH = parseFloat(svg.style.height);
-      if (styleW > 0) svgW = svgW || styleW;
-      if (styleH > 0) svgH = svgH || styleH;
-    }
+    // ---- 4. Measure available space from the parent (.mermaid-lightbox-container) ----
+    var parent = svgContainer.parentElement;
+    var availW = parent.clientWidth;
+    var availH = parent.clientHeight;
+    if (availW <= 0 || availH <= 0) return 1;
 
-    // 4. Last resort: temporarily reset constraints and measure the rendered size
-    if (!svgW || !svgH) {
-      var origMaxW = svg.style.maxWidth;
-      var origW = svg.style.width;
-      var origH = svg.style.height;
-      svg.style.maxWidth = 'none';
-      svg.style.width = 'auto';
-      svg.style.height = 'auto';
-      var bbox = svg.getBoundingClientRect();
-      svgW = svgW || bbox.width;
-      svgH = svgH || bbox.height;
-      svg.style.maxWidth = origMaxW;
-      svg.style.width = origW;
-      svg.style.height = origH;
-    }
+    // ---- 5. Compute scale to fit ----
+    var scale = Math.min(availW / divRect.width, availH / divRect.height);
 
-    if (!svgW || !svgH) return 1;
-
-    // Available viewport (margins for toolbar/nav/counter + lightbox padding)
-    var pad = 48; // ~1.5em padding each side
-    var vpW = window.innerWidth * 0.90 - pad;
-    var vpH = window.innerHeight * 0.85 - pad;
-
-    // Fit to the tighter axis so the entire diagram is visible
-    var scaleW = vpW / svgW;
-    var scaleH = vpH / svgH;
-    var scale = Math.min(scaleW, scaleH);
-
-    // Don't over-enlarge tiny diagrams beyond 4x
-    return Math.min(scale, 4);
+    // Don't over-enlarge tiny diagrams beyond 4×
+    return Math.min(Math.max(scale, MIN_SCALE), 4);
   }
 
   /* ---- Transform helpers ---- */
@@ -667,7 +663,13 @@
       ? wrapper.querySelector('svg').outerHTML
       : wrapper.innerHTML;
 
-    // Compute fit-to-screen scale from SVG intrinsic dimensions
+    // Ensure the overlay is laid out so we can measure inside computeFitScale.
+    // CSS keeps it invisible (opacity:0, visibility:hidden) until .active is added.
+    lightboxOverlay.style.display = 'flex';
+    lightboxOverlay.classList.remove('active');
+    void lightboxOverlay.offsetHeight; // force reflow
+
+    // Compute fit-to-screen scale from actual measurements
     fitScale = computeFitScale(svgContainer);
 
     // Initialize zoom state at fit scale
@@ -683,8 +685,7 @@
     updateCounter();
     updateNavButtons();
 
-    lightboxOverlay.style.display = 'flex';
-    lightboxOverlay.offsetHeight; // force reflow
+    // Now reveal with transition
     lightboxOverlay.classList.add('active');
     document.body.style.overflow = 'hidden';
     document.addEventListener('keydown', lbKeyHandler);

@@ -793,6 +793,7 @@
     lightboxOverlay.className = 'mermaid-lightbox-overlay';
     lightboxOverlay.innerHTML = [
       '<div class="mermaid-lightbox-toolbar">',
+      '  <button data-action="copy" title="Copy Mermaid source">&#x2398;</button>',
       '  <button data-action="zoomIn" title="Zoom in (+)">+</button>',
       '  <button data-action="zoomOut" title="Zoom out (-)">&#x2212;</button>',
       '  <button data-action="reset" title="Reset (0)">&#x21BA;</button>',
@@ -807,6 +808,19 @@
     ].join('\n');
 
     // ---- Toolbar actions ----
+    lightboxOverlay.querySelector('[data-action="copy"]').onclick = function (e) {
+      e.stopPropagation();
+      var w = lightboxDiagrams[lightboxIndex];
+      if (!w) return;
+      var src = w.getAttribute('data-mermaid-source');
+      var block = '```mermaid\n' + src + '\n```';
+      var btn = this;
+      navigator.clipboard.writeText(block).then(function () {
+        btn.textContent = '\u2713';
+        setTimeout(function () { btn.innerHTML = '\u2398'; }, 1500);
+      });
+      showControls();
+    };
     lightboxOverlay.querySelector('[data-action="zoomIn"]').onclick = function (e) { e.stopPropagation(); lbZoomIn(); showControls(); };
     lightboxOverlay.querySelector('[data-action="zoomOut"]').onclick = function (e) { e.stopPropagation(); lbZoomOut(); showControls(); };
     lightboxOverlay.querySelector('[data-action="reset"]').onclick = function (e) { e.stopPropagation(); lbReset(); showControls(); };

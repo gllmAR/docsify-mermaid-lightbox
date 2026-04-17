@@ -322,6 +322,28 @@
   }
 
   /* ------------------------------------------------------------------ */
+  /*  Clipboard helper (fallback for non-HTTPS)                          */
+  /* ------------------------------------------------------------------ */
+  function copyToClipboard(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(text);
+    }
+    // Fallback: hidden textarea + execCommand
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    ta.style.top = '-9999px';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    return new Promise(function (resolve, reject) {
+      document.execCommand('copy') ? resolve() : reject();
+      ta.remove();
+    });
+  }
+
+  /* ------------------------------------------------------------------ */
   /*  Rendering helper                                                   */
   /* ------------------------------------------------------------------ */
   var renderCounter = 0;
@@ -358,7 +380,7 @@
           var src = this.closest('.docsify-mermaid').getAttribute('data-mermaid-source');
           var block = '```mermaid\n' + src + '\n```';
           var btn = this;
-          navigator.clipboard.writeText(block).then(function () {
+          copyToClipboard(block).then(function () {
             btn.textContent = '\u2713'; // ✓
             setTimeout(function () { btn.innerHTML = '\u2398'; }, 1500);
           });
@@ -815,7 +837,7 @@
       var src = w.getAttribute('data-mermaid-source');
       var block = '```mermaid\n' + src + '\n```';
       var btn = this;
-      navigator.clipboard.writeText(block).then(function () {
+      copyToClipboard(block).then(function () {
         btn.textContent = '\u2713';
         setTimeout(function () { btn.innerHTML = '\u2398'; }, 1500);
       });

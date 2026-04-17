@@ -434,7 +434,6 @@
       }
       svgEl.style.transform = 'translate3d(0, 0, 0) scale(1)';
       svgEl.classList.remove('zoomed', 'grabbing');
-      // Restore default transition after animation
       if (animate !== false) {
         setTimeout(function () {
           if (svgEl) svgEl.style.transition = '';
@@ -498,7 +497,7 @@
     lbY -= (deltaH * percentY) - (deltaH / 2);
     lbScale = newScale;
 
-    // Smooth reset towards center when zooming back to 1
+    // Smooth reset towards center when zooming back to MIN_SCALE
     if (newScale <= MIN_SCALE) {
       lbX = 0;
       lbY = 0;
@@ -547,8 +546,7 @@
     updateNavButtons();
 
     lightboxOverlay.style.display = 'flex';
-    // Force reflow then activate
-    lightboxOverlay.offsetHeight; // eslint-disable-line no-unused-expressions
+    lightboxOverlay.offsetHeight; // force reflow
     lightboxOverlay.classList.add('active');
     document.body.style.overflow = 'hidden';
     document.addEventListener('keydown', lbKeyHandler);
